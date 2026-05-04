@@ -1,0 +1,73 @@
+server:
+  port: 8080
+
+theme:
+  background-color: 240 21 15
+  primary-color: 217 92 83
+  contrast-multiplier: 1.2
+
+pages:
+  - name: Home
+    columns:
+      - size: small
+        widgets:
+          - type: clock
+            hour-format: 24h
+
+          - type: weather
+            location: Melbourne, Victoria, Australia
+            units: metric
+            hour-format: 24h
+
+      - size: full
+        widgets:
+          - type: rss
+            title: Australian News
+            style: horizontal-cards
+            limit: 6
+            feeds:
+              - url: https://www.abc.net.au/news/feed/51120/rss.xml
+                title: ABC News
+              - url: https://feeds.smh.com.au/rssheadlines/top.xml
+                title: Sydney Morning Herald
+              - url: https://www.theguardian.com/au/rss
+                title: Guardian Australia
+
+          - type: rss
+            title: World News
+            style: horizontal-cards
+            limit: 6
+            feeds:
+              - url: https://feeds.bbci.co.uk/news/world/rss.xml
+                title: BBC World
+              - url: https://rss.nytimes.com/services/xml/rss/nyt/World.xml
+                title: NY Times World
+              - url: https://feeds.reuters.com/reuters/topNews
+                title: Reuters
+
+      - size: small
+        widgets:
+          - type: calendar
+            first-day-of-week: monday
+
+          - type: rss
+            title: Tech News
+            limit: 5
+            feeds:
+              - url: https://www.theverge.com/rss/index.xml
+                title: The Verge
+              - url: https://hnrss.org/frontpage
+                title: Hacker News
+
+  - name: More Feeds
+    columns:
+      - size: full
+        widgets:
+          - type: rss
+            title: Science & World
+            limit: 8
+            feeds:
+              - url: https://www.science.org/rss/news_current.xml
+                title: Science Magazine
+              - url: https://rss.nytimes.com/services/xml/rss/nyt/Science.xml
+                title: NY Times Science
