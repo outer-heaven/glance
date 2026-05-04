@@ -86,11 +86,11 @@ pages:
             hour-format: 24h
             timezones:
               - timezone: America/New_York
-                label: New York/Boston
+                label: New York & Boston
               - timezone: Asia/Kolkata
                 label: Bengaluru
               - timezone: Asia/Kuala_Lumpur
-                label: Kuala Lumpur
+                label: Foshan & Kuala Lumpur
               - timezone: Australia/Melbourne
                 label: Melbourne
               
@@ -114,38 +114,37 @@ pages:
             cache: 3h
             url: https://api.open-meteo.com/v1/forecast?latitude=-37.8462917&longitude=145.2524768&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Australia%2FMelbourne&wind_speed_unit=kmh&forecast_days=7
             template: |
+              {{ $times  := .JSON.Array "daily.time" }}
+              {{ $codes  := .JSON.Array "daily.weathercode" }}
+              {{ $maxT   := .JSON.Array "daily.temperature_2m_max" }}
+              {{ $minT   := .JSON.Array "daily.temperature_2m_min" }}
+              {{ $rain   := .JSON.Array "daily.precipitation_probability_max" }}
               <div style="display:flex; flex-direction:column; gap:6px; padding:4px 0;">
-                {{ $days := .JSON.Array "daily.time" }}
-                {{ $codes := .JSON.Array "daily.weathercode" }}
-                {{ $maxT := .JSON.Array "daily.temperature_2m_max" }}
-                {{ $minT := .JSON.Array "daily.temperature_2m_min" }}
-                {{ $rain := .JSON.Array "daily.precipitation_probability_max" }}
-                {{ range $i, $day := $days }}
-                  {{ $d := $day.String }}
-                  {{ $code := index $codes $i }}
-                  {{ $max := index $maxT $i }}
-                  {{ $min := index $minT $i }}
-                  {{ $r := index $rain $i }}
+                {{ range $i, $day := $times }}
+                  {{ $code := (index $codes $i).Int "" }}
+                  {{ $max  := (index $maxT  $i).Float "" }}
+                  {{ $min  := (index $minT  $i).Float "" }}
+                  {{ $r    := (index $rain  $i).Int "" }}
+                  {{ $date := $day.String "" }}
                   <div style="display:flex; justify-content:space-between; align-items:center;
-                              padding:6px 10px; background:rgba(255,255,255,0.05);
-                              border-radius:6px;">
-                    <span style="width:100px; font-weight:600; font-size:0.85rem;">
-                      {{ $d | formatTime "2006-01-02" "Mon 2 Jan" }}
+                              padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:6px;">
+                    <span style="width:110px; font-weight:600; font-size:0.85rem;">
+                      {{ $date | parseTime "2006-01-02" | formatTime "Mon 2 Jan" }}
                     </span>
-                    <span style="width:40px; font-size:1.2rem; text-align:center;">
-                      {{ if le ($code.Int) 1 }}☀️
-                      {{ else if le ($code.Int) 3 }}⛅
-                      {{ else if le ($code.Int) 48 }}☁️
-                      {{ else if le ($code.Int) 67 }}🌧️
-                      {{ else if le ($code.Int) 77 }}🌨️
+                    <span style="width:36px; font-size:1.1rem; text-align:center;">
+                      {{ if le $code 1 }}☀️
+                      {{ else if le $code 3 }}⛅
+                      {{ else if le $code 48 }}☁️
+                      {{ else if le $code 67 }}🌧️
+                      {{ else if le $code 77 }}🌨️
                       {{ else }}⛈️{{ end }}
                     </span>
-                    <span style="width:80px; text-align:right; font-size:0.85rem;">
-                      <span style="color:var(--color-primary); font-weight:600;">{{ $max.Float | printf "%.0f" }}°</span>
-                      <span style="opacity:0.6;"> / {{ $min.Float | printf "%.0f" }}°</span>
+                    <span style="width:90px; text-align:right; font-size:0.85rem;">
+                      <span style="color:var(--color-primary); font-weight:600;">{{ printf "%.0f" $max }}°</span>
+                      <span style="opacity:0.55;"> / {{ printf "%.0f" $min }}°</span>
                     </span>
-                    <span style="width:60px; text-align:right; font-size:0.8rem; opacity:0.7;">
-                      💧 {{ $r.Int }}%
+                    <span style="width:55px; text-align:right; font-size:0.8rem; opacity:0.65;">
+                      💧 {{ $r }}%
                     </span>
                   </div>
                 {{ end }}
