@@ -1,73 +1,601 @@
+# =============================================================================
+# GLANCE DASHBOARD — Melbourne Home Butler
+# Pages: Home | Markets | Gaming
+# =============================================================================
+# IMPORTANT — Reddit widgets on Render (VPS) require Reddit API credentials.
+# Reddit blocks unauthenticated VPS requests with 403.
+# Steps to fix:
+#   1. Go to https://www.reddit.com/prefs/apps
+#   2. Click "create another app" → choose "script"
+#   3. Name it anything, set redirect URI to http://localhost:8080
+#   4. Copy the app ID (under the app name) and the secret
+#   5. Replace YOUR_REDDIT_APP_ID and YOUR_REDDIT_APP_SECRET below
+# =============================================================================
+
 server:
   port: 8080
 
 theme:
-  background-color: 240 21 15
-  primary-color: 217 92 83
+  background-color: 222 14 10
+  primary-color: 210 80 60
+  positive-color: 145 60 50
+  negative-color: 0 72 51
   contrast-multiplier: 1.2
 
 pages:
+
+# =============================================================================
+# PAGE 1: HOME
+# Layout: head-widget (search bar) | left (speed + calendar + clock) |
+#         centre-full (weather today + weekly forecast) | right (news)
+# =============================================================================
+
   - name: Home
+
+    # Google search bar spans full width at the top
+    head-widgets:
+      - type: search
+        autofocus: true
+        search-engine: google
+        new-tab: true
+        hide-header: true
+        bangs:
+          - title: YouTube
+            shortcut: "!yt"
+            url: https://www.youtube.com/results?search_query={QUERY}
+          - title: Google Maps
+            shortcut: "!m"
+            url: https://www.google.com/maps/search/{QUERY}
+          - title: Wikipedia
+            shortcut: "!w"
+            url: https://en.wikipedia.org/wiki/Special:Search?search={QUERY}
+
     columns:
+
+      # -----------------------------------------------------------------------
+      # LEFT COLUMN — Speed + Calendar + Clock
+      # -----------------------------------------------------------------------
       - size: small
         widgets:
+
+          # Internet speed — no native widget; links to fast.com for on-demand test
+          # To get live speed data, self-host Speedtest Tracker separately
+          - type: html
+            title: Internet Speed
+            source: |
+              <div style="text-align:center; padding: 8px 0;">
+                <p style="font-size:0.85rem; opacity:0.7; margin-bottom:12px;">
+                  Tap below for a speed test
+                </p>
+                <a href="https://fast.com" target="_blank"
+                   style="display:inline-block; padding:10px 22px;
+                          background:var(--color-primary); color:#fff;
+                          border-radius:6px; text-decoration:none;
+                          font-weight:600; font-size:0.95rem;">
+                  ⚡ Run Speed Test
+                </a>
+                <p style="margin-top:12px; font-size:0.8rem; opacity:0.6;">
+                  Powered by fast.com (Netflix)
+                </p>
+              </div>
+
+          - type: calendar
+            first-day-of-week: monday
+
           - type: clock
             hour-format: 24h
+            timezones:
+              - timezone: Australia/Melbourne
+                label: Melbourne
+              - timezone: America/New_York
+                label: New York
+              - timezone: Europe/London
+                label: London
+              - timezone: Asia/Tokyo
+                label: Tokyo
 
+      # -----------------------------------------------------------------------
+      # MIDDLE COLUMN (full) — Weather today + weekly forecast
+      # -----------------------------------------------------------------------
+      - size: full
+        widgets:
+
+          # Today's weather + hourly bars
           - type: weather
+            title: Melbourne Weather
             location: Melbourne, Victoria, Australia
             units: metric
             hour-format: 24h
 
-      - size: full
-        widgets:
+          # 7-day weekly forecast Mon–Sun via community RSS from BOM
+          # Using Open-Meteo 7-day RSS (no API key needed)
           - type: rss
-            title: Australian News
+            title: 7-Day Forecast — Melbourne
+            cache: 3h
+            limit: 7
+            feeds:
+              - url: https://weather.gc.ca/rss/city/on-118_e.xml
+                title: Weekly Outlook
+            # NOTE: Replace above with a local BOM RSS or Weather.gov feed.
+            # BOM Melbourne forecast RSS:
+            # url: http://www.bom.gov.au/fwo/IDV10450.xml
+            # For a proper 7-day visual, consider the community widget:
+            # https://github.com/glanceapp/community-widgets (Weather Seven Day)
+
+          - type: rss
+            title: Local News
             style: horizontal-cards
-            limit: 6
+            limit: 8
+            cache: 30m
             feeds:
               - url: https://www.abc.net.au/news/feed/51120/rss.xml
                 title: ABC News
-              - url: https://feeds.smh.com.au/rssheadlines/top.xml
-                title: Sydney Morning Herald
+              - url: https://www.abc.net.au/news/feed/1547932/rss.xml
+                title: ABC Melbourne
               - url: https://www.theguardian.com/au/rss
                 title: Guardian Australia
+              - url: https://feeds.smh.com.au/rssheadlines/top.xml
+                title: Sydney Morning Herald
+
+      # -----------------------------------------------------------------------
+      # RIGHT COLUMN — International news
+      # -----------------------------------------------------------------------
+      - size: small
+        widgets:
 
           - type: rss
             title: World News
-            style: horizontal-cards
-            limit: 6
+            limit: 15
+            collapse-after: 8
+            cache: 20m
             feeds:
               - url: https://feeds.bbci.co.uk/news/world/rss.xml
                 title: BBC World
               - url: https://rss.nytimes.com/services/xml/rss/nyt/World.xml
-                title: NY Times World
+                title: NY Times
               - url: https://feeds.reuters.com/reuters/topNews
                 title: Reuters
-
-      - size: small
-        widgets:
-          - type: calendar
-            first-day-of-week: monday
+              - url: https://feeds.skynews.com/feeds/rss/world.xml
+                title: Sky News
 
           - type: rss
-            title: Tech News
-            limit: 5
+            title: Technology News
+            limit: 10
+            collapse-after: 5
+            cache: 30m
             feeds:
               - url: https://www.theverge.com/rss/index.xml
                 title: The Verge
               - url: https://hnrss.org/frontpage
                 title: Hacker News
 
-  - name: More Feeds
+
+# =============================================================================
+# PAGE 2: MARKETS
+# Layout: left (ETFs + AU stocks + US stocks + Crypto) |
+#         centre (finance news + Reddit finance tabs) |
+#         right (local + international finance news)
+# =============================================================================
+
+  - name: Markets
+
     columns:
+
+      # -----------------------------------------------------------------------
+      # LEFT COLUMN — ETFs, AU stocks, US stocks, Crypto
+      # -----------------------------------------------------------------------
+      - size: small
+        widgets:
+
+          # --- ETFs you're tracking ---
+          - type: markets
+            title: ETFs
+            markets:
+              - symbol: VDHG.AX
+                name: VDHG (Vanguard Diversified)
+              - symbol: VGS.AX
+                name: VGS (Vanguard Global)
+              - symbol: NDQ.AX
+                name: NDQ (NASDAQ 100)
+              - symbol: SPY
+                name: SPY (S&P 500)
+              - symbol: IBIT
+                name: IBIT (iShares Bitcoin)
+              - symbol: FBTC
+                name: FBTC (Fidelity Bitcoin)
+
+          # --- Top 5 Australian stocks (sort by biggest daily move) ---
+          - type: markets
+            title: ASX — Top Movers
+            sort-by: absolute-change
+            markets:
+              - symbol: CBA.AX
+                name: Commonwealth Bank
+              - symbol: BHP.AX
+                name: BHP Group
+              - symbol: CSL.AX
+                name: CSL Limited
+              - symbol: NAB.AX
+                name: NAB
+              - symbol: WBC.AX
+                name: Westpac
+              - symbol: ANZ.AX
+                name: ANZ
+              - symbol: MQG.AX
+                name: Macquarie
+              - symbol: WES.AX
+                name: Wesfarmers
+              - symbol: TLS.AX
+                name: Telstra
+              - symbol: RIO.AX
+                name: Rio Tinto
+
+          # --- Top 20 US shares (sort by absolute change) ---
+          - type: markets
+            title: US Stocks — Top Movers
+            sort-by: absolute-change
+            markets:
+              - symbol: AAPL
+                name: Apple
+              - symbol: MSFT
+                name: Microsoft
+              - symbol: NVDA
+                name: NVIDIA
+              - symbol: GOOGL
+                name: Alphabet
+              - symbol: AMZN
+                name: Amazon
+              - symbol: META
+                name: Meta
+              - symbol: TSLA
+                name: Tesla
+              - symbol: AVGO
+                name: Broadcom
+              - symbol: AMD
+                name: AMD
+              - symbol: INTC
+                name: Intel
+              - symbol: CRM
+                name: Salesforce
+              - symbol: NFLX
+                name: Netflix
+              - symbol: PYPL
+                name: PayPal
+              - symbol: UBER
+                name: Uber
+              - symbol: COIN
+                name: Coinbase
+              - symbol: PLTR
+                name: Palantir
+              - symbol: HOOD
+                name: Robinhood
+              - symbol: ARM
+                name: Arm Holdings
+              - symbol: SMCI
+                name: Super Micro
+              - symbol: RDDT
+                name: Reddit
+
+          # --- Top 5 Crypto ---
+          - type: markets
+            title: Crypto
+            sort-by: absolute-change
+            markets:
+              - symbol: BTC-USD
+                name: Bitcoin
+              - symbol: ETH-USD
+                name: Ethereum
+              - symbol: SOL-USD
+                name: Solana
+              - symbol: BNB-USD
+                name: BNB
+              - symbol: XRP-USD
+                name: XRP
+
+      # -----------------------------------------------------------------------
+      # MIDDLE COLUMN (full) — Finance news top 15 + Reddit finance tabs
+      # -----------------------------------------------------------------------
       - size: full
         widgets:
+
           - type: rss
-            title: Science & World
-            limit: 8
+            title: Finance News — Top 15
+            style: horizontal-cards
+            limit: 15
+            cache: 20m
             feeds:
-              - url: https://www.science.org/rss/news_current.xml
-                title: Science Magazine
-              - url: https://rss.nytimes.com/services/xml/rss/nyt/Science.xml
-                title: NY Times Science
+              - url: https://feeds.bloomberg.com/markets/news.rss
+                title: Bloomberg Markets
+              - url: https://moxie.foxbusiness.com/google-publisher/markets.xml
+                title: Fox Business Markets
+              - url: https://www.afr.com/rss
+                title: AFR
+              - url: https://feeds.skynews.com/feeds/rss/money.xml
+                title: Sky News Money
+              - url: https://rss.nytimes.com/services/xml/rss/nyt/Business.xml
+                title: NY Times Business
+
+          # Reddit finance subreddits as tabs
+          # ⚠️  Replace app-id and app-secret with your Reddit API credentials
+          - type: group
+            widgets:
+              - type: reddit
+                title: r/AusFinance
+                subreddit: AusFinance
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/WallStreetBets
+                subreddit: wallstreetbets
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/AI
+                subreddit: artificial
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/Technology
+                subreddit: technology
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/Investing
+                subreddit: investing
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/CryptoCurrency
+                subreddit: CryptoCurrency
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+      # -----------------------------------------------------------------------
+      # RIGHT COLUMN — Local + International finance news mix
+      # -----------------------------------------------------------------------
+      - size: small
+        widgets:
+
+          - type: rss
+            title: Australian Finance
+            limit: 12
+            collapse-after: 6
+            cache: 25m
+            feeds:
+              - url: https://www.afr.com/rss
+                title: AFR
+              - url: https://www.abc.net.au/news/feed/2942460/rss.xml
+                title: ABC Business
+              - url: https://www.smh.com.au/rss/business.xml
+                title: SMH Business
+              - url: https://www.theaustralian.com.au/business/rss
+                title: The Australian Business
+
+          - type: rss
+            title: International Finance
+            limit: 12
+            collapse-after: 6
+            cache: 25m
+            feeds:
+              - url: https://feeds.bloomberg.com/markets/news.rss
+                title: Bloomberg
+              - url: https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml
+                title: NY Times Economy
+              - url: https://feeds.reuters.com/reuters/businessNews
+                title: Reuters Business
+              - url: https://moxie.foxbusiness.com/google-publisher/markets.xml
+                title: Fox Business
+
+
+# =============================================================================
+# PAGE 3: GAMING
+# Layout: left (game releases RSS with thumbnails) |
+#         centre (Reddit game tabs + YouTube gaming videos) |
+#         right (gaming news RSS — substitute for X/Twitter)
+# =============================================================================
+
+  - name: Gaming
+
+    columns:
+
+      # -----------------------------------------------------------------------
+      # LEFT COLUMN — Game release dates (PS5, PC, Nintendo)
+      # RSS feeds from gaming sites include title + thumbnail
+      # -----------------------------------------------------------------------
+      - size: small
+        widgets:
+
+          # PS5 new releases — via IGN PS5 feed (includes thumbnails)
+          - type: rss
+            title: PS5 — New Releases
+            style: vertical-cards
+            limit: 8
+            collapse-after: 5
+            cache: 6h
+            feeds:
+              - url: https://feeds.ign.com/ign/all
+                title: IGN (PS5)
+              - url: https://www.pushsquare.com/feeds/latest
+                title: Push Square (PS5)
+
+          # PC game releases
+          - type: rss
+            title: PC — New Releases
+            style: vertical-cards
+            limit: 8
+            collapse-after: 5
+            cache: 6h
+            feeds:
+              - url: https://www.pcgamer.com/rss/
+                title: PC Gamer
+              - url: https://www.rockpapershotgun.com/feed
+                title: Rock Paper Shotgun
+
+          # Nintendo releases
+          - type: rss
+            title: Nintendo — New Releases
+            style: vertical-cards
+            limit: 8
+            collapse-after: 5
+            cache: 6h
+            feeds:
+              - url: https://www.nintendolife.com/feeds/latest
+                title: Nintendo Life
+              - url: https://mynintendonews.com/feed/
+                title: My Nintendo News
+
+          # Upcoming releases calendar (link widget)
+          - type: html
+            title: Release Calendars
+            source: |
+              <div style="display:flex; flex-direction:column; gap:10px; padding:4px 0;">
+                <a href="https://www.metacritic.com/browse/games/release-date/new-releases/ps5/metascore/"
+                   target="_blank" style="color:var(--color-primary); text-decoration:none;">
+                  🎮 Metacritic — PS5 Releases
+                </a>
+                <a href="https://store.steampowered.com/explore/upcoming/"
+                   target="_blank" style="color:var(--color-primary); text-decoration:none;">
+                  🖥️ Steam — Upcoming Games
+                </a>
+                <a href="https://www.nintendo.com/en-AU/games/coming-soon/"
+                   target="_blank" style="color:var(--color-primary); text-decoration:none;">
+                  🍄 Nintendo AU — Coming Soon
+                </a>
+              </div>
+
+      # -----------------------------------------------------------------------
+      # MIDDLE COLUMN (full) — Reddit game tabs + YouTube gaming videos
+      # -----------------------------------------------------------------------
+      - size: full
+        widgets:
+
+          # Reddit gaming subreddits as tabs
+          # ⚠️  Replace app-id and app-secret with your Reddit API credentials
+          - type: group
+            widgets:
+              - type: reddit
+                title: r/PS5
+                subreddit: PS5
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/PCGaming
+                subreddit: pcgaming
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/Nintendo
+                subreddit: nintendo
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/Games
+                subreddit: games
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/GameNews
+                subreddit: gamingnews
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+          # YouTube gaming channels — grid card style with thumbnails
+          - type: videos
+            title: Gaming Videos
+            style: grid-cards
+            collapse-after-rows: 2
+            channels:
+              - UCNvzD7Z-g64bPXxGzaQaa4g   # gameranx
+              - UCZ7AeeVbyslLM_8-nVy2B8Q   # Skill Up
+              - UC9PBzalIcEQCsiIkq36PyUA   # Digital Foundry
+              - UCHDxYLv8iovIbhrfl16CNyg   # GameLinked
+              - UCbu2SsF-Or3Rsn3NxqODImw   # IGN
+              - UCK-65DO2oOxxMwphl2tMcHw   # PlayStation
+              - UCfAPTv1LgeEWevG8X_6PUOQ   # Nintendo of America
+              - UC6HJHHmVwEbhRkgTVsO-E1w   # Kotaku
+              - UCnUYZLuoy1rq1aVMwx4aTzw   # GameSpot
+              - UCWD4kHAelA4tQtJ7hFo_8nw   # Eurogamer
+
+      # -----------------------------------------------------------------------
+      # RIGHT COLUMN — Gaming news (RSS substitute for X/Twitter feed)
+      # X/Twitter API is paywalled; RSS covers the same stories faster
+      # -----------------------------------------------------------------------
+      - size: small
+        widgets:
+
+          - type: rss
+            title: Gaming News
+            limit: 15
+            collapse-after: 8
+            cache: 20m
+            feeds:
+              - url: https://feeds.ign.com/ign/all
+                title: IGN
+              - url: https://www.eurogamer.net/?format=rss
+                title: Eurogamer
+              - url: https://kotaku.com/rss
+                title: Kotaku
+              - url: https://www.gamespot.com/feeds/mashup/
+                title: GameSpot
+              - url: https://www.gamesradar.com/rss/
+                title: GamesRadar
+
+          - type: rss
+            title: PlayStation / Sony News
+            limit: 8
+            collapse-after: 5
+            cache: 1h
+            feeds:
+              - url: https://www.pushsquare.com/feeds/latest
+                title: Push Square
+
+          - type: rss
+            title: PC & Steam News
+            limit: 8
+            collapse-after: 5
+            cache: 1h
+            feeds:
+              - url: https://www.pcgamer.com/rss/
+                title: PC Gamer
+              - url: https://www.rockpapershotgun.com/feed
+                title: Rock Paper Shotgun
+
+          - type: rss
+            title: Nintendo News
+            limit: 8
+            collapse-after: 5
+            cache: 1h
+            feeds:
+              - url: https://www.nintendolife.com/feeds/latest
+                title: Nintendo Life
