@@ -17,8 +17,13 @@ pages:
 
 # =============================================================================
 # PAGE 1: HOME
+# Layout: head-widget (search bar) | left (speed + calendar + clock) |
+#         centre-full (weather today + weekly forecast) | right (news)
 # =============================================================================
+
   - name: Home
+
+    # Google search bar spans full width at the top
     head-widgets:
       - type: search
         autofocus: true
@@ -37,20 +42,32 @@ pages:
             url: https://en.wikipedia.org/wiki/Special:Search?search={QUERY}
 
     columns:
+
+      # -----------------------------------------------------------------------
+      # LEFT COLUMN — Speed + Calendar + Clock
+      # -----------------------------------------------------------------------
       - size: small
         widgets:
-          - type: html
-            title: Internet Speed
-            source: |
-              <div style="text-align:center; padding: 8px 0;">
-                <p style="font-size:0.85rem; opacity:0.7; margin-bottom:12px;">Tap below for a speed test</p>
-                <a href="https://fast.com" target="_blank"
-                   style="display:inline-block; padding:10px 22px; background:var(--color-primary); color:#fff; border-radius:6px; text-decoration:none; font-weight:600; font-size:0.95rem;">
-                  ⚡ Run Speed Test
-                </a>
-              </div>
+
+          - type: custom-api
+            title: Quote of the Day
+            cache: 24h
+            url: https://zenquotes.io/api/quotes/investing
+            template: |
+                {{ range .JSON.Array "" }}
+                <div style="padding: 10px 4px;">
+                  <p style="font-size:1.2rem; line-height:1.6; font-style:italic; opacity:0.9; margin-bottom:12px;">
+                    "{{ .String "q" }}"
+                  </p>
+                  <p style="font-size:1.2rem; opacity:0.55; text-align:right;">
+                    — {{ .String "a" }}
+                  </p>
+                </div>
+                {{ end }}   
+                
           - type: calendar
             first-day-of-week: monday
+
           - type: clock
             hour-format: 24h
             timezones:
@@ -62,223 +79,877 @@ pages:
                 label: Foshan & Kuala Lumpur
               - timezone: Australia/Melbourne
                 label: Melbourne
-
+              
+      # -----------------------------------------------------------------------
+      # MIDDLE COLUMN (full) — Weather today + weekly forecast
+      # -----------------------------------------------------------------------
       - size: full
         widgets:
+
+          # Today's weather + hourly bars
           - type: weather
             title: Melbourne Weather
             location: Melbourne, Victoria, Australia
             units: metric
             hour-format: 24h
+
+          # 7-day weekly forecast Mon–Sun via community RSS from BOM
+          # Using Open-Meteo 7-day RSS (no API key needed)
           - type: custom-api
             title: 7-Day Forecast — Melbourne
             cache: 3h
             url: https://api.open-meteo.com/v1/forecast?latitude=-37.8462917&longitude=145.2524768&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Australia%2FMelbourne&wind_speed_unit=kmh&forecast_days=7
             template: |
-              {{ $times  := .JSON.Array "daily.time" }}
-              {{ $codes  := .JSON.Array "daily.weathercode" }}
-              {{ $maxT   := .JSON.Array "daily.temperature_2m_max" }}
-              {{ $minT   := .JSON.Array "daily.temperature_2m_min" }}
-              {{ $rain   := .JSON.Array "daily.precipitation_probability_max" }}
-              <div style="display:flex; flex-direction:column; gap:6px; padding:4px 0;">
-                {{ range $i, $day := $times }}
-                  <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:6px;">
-                    <span style="width:110px; font-weight:600; font-size:0.85rem;">{{ $day.String "" | parseTime "2006-01-02" | formatTime "Mon 2 Jan" }}</span>
-                    <span style="width:90px; text-align:right; font-size:0.85rem;">
-                      <span style="color:var(--color-primary); font-weight:600;">{{ printf "%.0f" (index $maxT $i).Float }}°</span>
-                      <span style="opacity:0.55;"> / {{ printf "%.0f" (index $minT $i).Float }}°</span>
-                    </span>
-                  </div>
-                {{ end }}
-              </div>
+                {{ $times  := .JSON.Array "daily.time" }}
+                {{ $codes  := .JSON.Array "daily.weathercode" }}
+                {{ $maxT   := .JSON.Array "daily.temperature_2m_max" }}
+                {{ $minT   := .JSON.Array "daily.temperature_2m_min" }}
+                {{ $rain   := .JSON.Array "daily.precipitation_probability_max" }}
+                <div style="display:flex; flex-direction:column; gap:3px; padding:4px 0;">
+                  {{ range $i, $day := $times }}
+                    {{ $code := (index $codes $i).Int "" }}
+                    {{ $max  := (index $maxT  $i).Float "" }}
+                    {{ $min  := (index $minT  $i).Float "" }}
+                    {{ $r    := (index $rain  $i).Int "" }}
+                    {{ $date := $day.String "" }}
+                    <div style="display:flex; justify-content:space-between; align-items:center;
+                                padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:6px;">
+                      <span style="width:110px; font-size:1.2rmatTime "Mon 2 Jan" }}
+                      </span>
+                      <span style="width:36px; font-size:1.8rem; text-align:center;">
+                        {{ if le $code 1 }}☀️
+                        {{ else if le $code 3 }}⛅
+                        {{ else if le $code 48 }}☁️
+                        {{ else if le $code 67 }}🌧️
+                        {{ else if le $code 77 }}🌨️
+                        {{ else }}⛈️{{ end }}
+                      </span>
+                      <span style="width:90px; text-align:right; font-size:1.2rem;">
+                        <span style="color:var(--color-primary);">{{ printf "%.0f" $max }}°</span>
+                        <span style="opacity:0.55;"> / {{ printf "%.0f" $min }}°</span>
+                      </span>
+                      <span style="width:55px; text-align:right; font-size:1.2rem; opacity:0.65;">
+                        💧 {{ $r }}%
+                      </span>
+                    </div>
+                  {{ end }}
+                </div>
+            </div>
           - type: rss
             title: Local News
             style: horizontal-cards
             limit: 8
+            cache: 30m
             feeds:
               - url: https://www.abc.net.au/news/feed/51120/rss.xml
                 title: ABC News
+              - url: https://www.abc.net.au/news/feed/1547932/rss.xml
+                title: ABC Melbourne
               - url: https://www.theguardian.com/au/rss
                 title: Guardian Australia
+              - url: https://feeds.smh.com.au/rssheadlines/top.xml
+                title: Sydney Morning Herald
 
+      # -----------------------------------------------------------------------
+      # RIGHT COLUMN — International news
+      # -----------------------------------------------------------------------
       - size: small
         widgets:
+
           - type: rss
             title: World News
             limit: 15
             collapse-after: 8
+            cache: 20m
             feeds:
               - url: https://feeds.bbci.co.uk/news/world/rss.xml
                 title: BBC World
+              - url: https://rss.nytimes.com/services/xml/rss/nyt/World.xml
+                title: NY Times
+              - url: https://feeds.reuters.com/reuters/topNews
+                title: Reuters
+              - url: https://feeds.skynews.com/feeds/rss/world.xml
+                title: Sky News
+
           - type: rss
             title: Technology News
             limit: 10
+            collapse-after: 5
+            cache: 30m
             feeds:
               - url: https://www.theverge.com/rss/index.xml
                 title: The Verge
+              - url: https://hnrss.org/frontpage
+                title: Hacker News
+
 
 # =============================================================================
 # PAGE 2: MARKETS
+# Layout: left (ETFs + AU stocks + US stocks + Crypto) |
+#         centre (finance news + Reddit finance tabs) |
+#         right (local + international finance news)
 # =============================================================================
+
   - name: Markets
+
     columns:
+
+      # -----------------------------------------------------------------------
+      # LEFT COLUMN — ETFs, AU stocks, US stocks, Crypto
+      # -----------------------------------------------------------------------
       - size: small
         widgets:
+
+          # --- ETFs you're tracking ---
           - type: markets
             title: ETFs
             markets:
               - symbol: VDHG.AX
-                name: VDHG
+                name: VDHG (Vanguard Diversified)
               - symbol: VGS.AX
-                name: VGS
+                name: VGS (Vanguard Global)
               - symbol: NDQ.AX
-                name: NDQ
+                name: NDQ (NASDAQ 100)
               - symbol: SPY
-                name: SPY
+                name: SPY (S&P 500)
+              - symbol: IBIT
+                name: IBIT (iShares Bitcoin)
+              - symbol: FBTC
+                name: FBTC (Fidelity Bitcoin)
+
+          # --- Top 5 Australian stocks (sort by biggest daily move) ---
           - type: markets
             title: ASX — Top Movers
             sort-by: absolute-change
             markets:
               - symbol: CBA.AX
-                name: CBA
+                name: Commonwealth Bank
               - symbol: BHP.AX
-                name: BHP
+                name: BHP Group
               - symbol: CSL.AX
-                name: CSL
+                name: CSL Limited
+              - symbol: NAB.AX
+                name: NAB
+              - symbol: WBC.AX
+                name: Westpac
+              - symbol: ANZ.AX
+                name: ANZ
+              - symbol: MQG.AX
+                name: Macquarie
+              - symbol: WES.AX
+                name: Wesfarmers
+              - symbol: TLS.AX
+                name: Telstra
+              - symbol: RIO.AX
+                name: Rio Tinto
 
+          # --- Top 20 US shares (sort by absolute change) ---
+          - type: markets
+            title: US Stocks — Top Movers
+            sort-by: absolute-change
+            markets:
+              - symbol: AAPL
+                name: Apple
+              - symbol: MSFT
+                name: Microsoft
+              - symbol: NVDA
+                name: NVIDIA
+              - symbol: GOOGL
+                name: Alphabet
+              - symbol: AMZN
+                name: Amazon
+              - symbol: META
+                name: Meta
+              - symbol: TSLA
+                name: Tesla
+              - symbol: AVGO
+                name: Broadcom
+              - symbol: AMD
+                name: AMD
+              - symbol: INTC
+                name: Intel
+              - symbol: CRM
+                name: Salesforce
+              - symbol: NFLX
+                name: Netflix
+              - symbol: PYPL
+                name: PayPal
+              - symbol: UBER
+                name: Uber
+              - symbol: COIN
+                name: Coinbase
+              - symbol: PLTR
+                name: Palantir
+              - symbol: HOOD
+                name: Robinhood
+              - symbol: ARM
+                name: Arm Holdings
+              - symbol: SMCI
+                name: Super Micro
+              - symbol: RDDT
+                name: Reddit
+
+          # --- Top 5 Crypto ---
+          - type: markets
+            title: Crypto
+            sort-by: absolute-change
+            markets:
+              - symbol: BTC-USD
+                name: Bitcoin
+              - symbol: ETH-USD
+                name: Ethereum
+              - symbol: SOL-USD
+                name: Solana
+              - symbol: BNB-USD
+                name: BNB
+              - symbol: XRP-USD
+                name: XRP
+
+      # -----------------------------------------------------------------------
+      # MIDDLE COLUMN (full) — Finance news top 15 + Reddit finance tabs
+      # -----------------------------------------------------------------------
       - size: full
         widgets:
+
           - type: rss
-            title: Finance News
+            title: Finance News — Top 15
             style: horizontal-cards
             limit: 15
+            cache: 20m
             feeds:
               - url: https://feeds.bloomberg.com/markets/news.rss
-                title: Bloomberg
+                title: Bloomberg Markets
+              - url: https://moxie.foxbusiness.com/google-publisher/markets.xml
+                title: Fox Business Markets
+              - url: https://www.afr.com/rss
+                title: AFR
+              - url: https://feeds.skynews.com/feeds/rss/money.xml
+                title: Sky News Money
+              - url: https://rss.nytimes.com/services/xml/rss/nyt/Business.xml
+                title: NY Times Business
+
+          # Reddit finance subreddits as tabs
+          # ⚠️  Replace app-id and app-secret with your Reddit API credentials
           - type: group
             widgets:
               - type: reddit
                 title: r/AusFinance
                 subreddit: AusFinance
+                show-thumbnails: true
+                collapse-after: 8
                 app-id: YOUR_REDDIT_APP_ID
                 app-secret: YOUR_REDDIT_APP_SECRET
+
               - type: reddit
                 title: r/WallStreetBets
                 subreddit: wallstreetbets
+                show-thumbnails: true
+                collapse-after: 8
                 app-id: YOUR_REDDIT_APP_ID
                 app-secret: YOUR_REDDIT_APP_SECRET
 
+              - type: reddit
+                title: r/AI
+                subreddit: artificial
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/Technology
+                subreddit: technology
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/Investing
+                subreddit: investing
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/CryptoCurrency
+                subreddit: CryptoCurrency
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+      # -----------------------------------------------------------------------
+      # RIGHT COLUMN — Local + International finance news mix
+      # -----------------------------------------------------------------------
       - size: small
         widgets:
+
           - type: rss
             title: Australian Finance
             limit: 12
+            collapse-after: 6
+            cache: 25m
             feeds:
               - url: https://www.afr.com/rss
                 title: AFR
+              - url: https://www.abc.net.au/news/feed/2942460/rss.xml
+                title: ABC Business
+              - url: https://www.smh.com.au/rss/business.xml
+                title: SMH Business
+              - url: https://www.theaustralian.com.au/business/rss
+                title: The Australian Business
+
+          - type: rss
+            title: International Finance
+            limit: 12
+            collapse-after: 6
+            cache: 25m
+            feeds:
+              - url: https://feeds.bloomberg.com/markets/news.rss
+                title: Bloomberg
+              - url: https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml
+                title: NY Times Economy
+              - url: https://feeds.reuters.com/reuters/businessNews
+                title: Reuters Business
+              - url: https://moxie.foxbusiness.com/google-publisher/markets.xml
+                title: Fox Business
+
 
 # =============================================================================
 # PAGE 3: GAMING
+# Layout: left (game releases RSS with thumbnails) |
+#         centre (Reddit game tabs + YouTube gaming videos) |
+#         right (gaming news RSS — substitute for X/Twitter)
 # =============================================================================
+
   - name: Gaming
+
     columns:
+
+      # -----------------------------------------------------------------------
+      # LEFT COLUMN — Game release dates (PS5, PC, Nintendo)
+      # RSS feeds from gaming sites include title + thumbnail
+      # -----------------------------------------------------------------------
       - size: small
         widgets:
+
+          # PS5 new releases — via IGN PS5 feed (includes thumbnails)
           - type: rss
             title: PS5 — New Releases
             style: vertical-cards
             limit: 8
+            collapse-after: 5
+            cache: 6h
             feeds:
               - url: https://feeds.ign.com/ign/all
-                title: IGN
+                title: IGN (PS5)
+              - url: https://www.pushsquare.com/feeds/latest
+                title: Push Square (PS5)
+
+          # PC game releases
+          - type: rss
+            title: PC — New Releases
+            style: vertical-cards
+            limit: 8
+            collapse-after: 5
+            cache: 6h
+            feeds:
+              - url: https://www.pcgamer.com/rss/
+                title: PC Gamer
+              - url: https://www.rockpapershotgun.com/feed
+                title: Rock Paper Shotgun
+
+          # Nintendo releases
+          - type: rss
+            title: Nintendo — New Releases
+            style: vertical-cards
+            limit: 8
+            collapse-after: 5
+            cache: 6h
+            feeds:
+              - url: https://www.nintendolife.com/feeds/latest
+                title: Nintendo Life
+              - url: https://mynintendonews.com/feed/
+                title: My Nintendo News
+
+          # Upcoming releases calendar (link widget)
           - type: html
             title: Release Calendars
             source: |
-              <div style="display:flex; flex-direction:column; gap:10px;">
-                <a href="https://store.steampowered.com/explore/upcoming/" target="_blank" style="color:var(--color-primary); text-decoration:none;">🖥️ Steam — Upcoming</a>
+              <div style="display:flex; flex-direction:column; gap:10px; padding:4px 0;">
+                <a href="https://www.metacritic.com/browse/games/release-date/new-releases/ps5/metascore/"
+                   target="_blank" style="color:var(--color-primary); text-decoration:none;">
+                  🎮 Metacritic — PS5 Releases
+                </a>
+                <a href="https://store.steampowered.com/explore/upcoming/"
+                   target="_blank" style="color:var(--color-primary); text-decoration:none;">
+                  🖥️ Steam — Upcoming Games
+                </a>
+                <a href="https://www.nintendo.com/en-AU/games/coming-soon/"
+                   target="_blank" style="color:var(--color-primary); text-decoration:none;">
+                  🍄 Nintendo AU — Coming Soon
+                </a>
               </div>
 
+      # -----------------------------------------------------------------------
+      # MIDDLE COLUMN (full) — Reddit game tabs + YouTube gaming videos
+      # -----------------------------------------------------------------------
       - size: full
         widgets:
+
+          # Reddit gaming subreddits as tabs
+          # ⚠️  Replace app-id and app-secret with your Reddit API credentials
           - type: group
             widgets:
               - type: reddit
                 title: r/PS5
                 subreddit: PS5
+                show-thumbnails: true
+                collapse-after: 8
                 app-id: YOUR_REDDIT_APP_ID
                 app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/PCGaming
+                subreddit: pcgaming
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/Nintendo
+                subreddit: nintendo
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/Games
+                subreddit: games
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+              - type: reddit
+                title: r/GameNews
+                subreddit: gamingnews
+                show-thumbnails: true
+                collapse-after: 8
+                app-id: YOUR_REDDIT_APP_ID
+                app-secret: YOUR_REDDIT_APP_SECRET
+
+          # YouTube gaming channels — grid card style with thumbnails
           - type: videos
             title: Gaming Videos
             style: grid-cards
+            collapse-after-rows: 2
             channels:
               - UCNvzD7Z-g64bPXxGzaQaa4g   # gameranx
               - UCZ7AeeVbyslLM_8-nVy2B8Q   # Skill Up
+              - UC9PBzalIcEQCsiIkq36PyUA   # Digital Foundry
+              - UCHDxYLv8iovIbhrfl16CNyg   # GameLinked
+              - UCbu2SsF-Or3Rsn3NxqODImw   # IGN
+              - UCK-65DO2oOxxMwphl2tMcHw   # PlayStation
+              - UCfAPTv1LgeEWevG8X_6PUOQ   # Nintendo of America
+              - UC6HJHHmVwEbhRkgTVsO-E1w   # Kotaku
+              - UCnUYZLuoy1rq1aVMwx4aTzw   # GameSpot
+              - UCWD4kHAelA4tQtJ7hFo_8nw   # Eurogamer
 
+      # -----------------------------------------------------------------------
+      # RIGHT COLUMN — Gaming news (RSS substitute for X/Twitter feed)
+      # X/Twitter API is paywalled; RSS covers the same stories faster
+      # -----------------------------------------------------------------------
       - size: small
         widgets:
+
           - type: rss
             title: Gaming News
             limit: 15
+            collapse-after: 8
+            cache: 20m
             feeds:
+              - url: https://feeds.ign.com/ign/all
+                title: IGN
+              - url: https://www.eurogamer.net/?format=rss
+                title: Eurogamer
               - url: https://kotaku.com/rss
                 title: Kotaku
+              - url: https://www.gamespot.com/feeds/mashup/
+                title: GameSpot
+              - url: https://www.gamesradar.com/rss/
+                title: GamesRadar
 
-# =============================================================================
-# PAGE 4: ENTERTAINMENT
-# =============================================================================
+          - type: rss
+            title: PlayStation / Sony News
+            limit: 8
+            collapse-after: 5
+            cache: 1h
+            feeds:
+              - url: https://www.pushsquare.com/feeds/latest
+                title: Push Square
+
+          - type: rss
+            title: PC & Steam News
+            limit: 8
+            collapse-after: 5
+            cache: 1h
+            feeds:
+              - url: https://www.pcgamer.com/rss/
+                title: PC Gamer
+              - url: https://www.rockpapershotgun.com/feed
+                title: Rock Paper Shotgun
+
+          - type: rss
+            title: Nintendo News
+            limit: 8
+            collapse-after: 5
+            cache: 1h
+            feeds:
+              - url: https://www.nintendolife.com/feeds/latest
+                title: Nintendo Life
+
+        # ===========================================================================
+        # PAGE 4: ENTERTAINMENT
+        # Left: XKCD comic | Centre: Movie/TV posters + Events | Right: Celebrity birthdays
+        # Requires: TMDB_API_KEY and TICKETMASTER_API_KEY
+        # ===========================================================================
+
   - name: Entertainment
+
     columns:
+
+      # -----------------------------------------------------------------------
+      # LEFT COLUMN — Daily XKCD Comic Strip
+      # -----------------------------------------------------------------------
       - size: small
         widgets:
+
           - type: custom-api
             title: XKCD — Today's Comic
             cache: 24h
             url: https://xkcd.com/info.0.json
             template: |
-              <div style="text-align:center;">
-                <img src="{{ .JSON.String "img" }}" style="max-width:100%; border-radius:6px;" />
-                <p>#{{ .JSON.Int "num" }} — {{ .JSON.String "safe_title" }}</p>
+              <div style="text-align:center; padding:4px 0;">
+                <a href="https://xkcd.com/{{ .JSON.Int "num" }}" target="_blank">
+                  <img src="{{ .JSON.String "img" }}"
+                       alt="{{ .JSON.String "alt" }}"
+                       style="max-width:100%; border-radius:6px;" />
+                </a>
+                <p style="margin-top:10px; font-weight:600; font-size:1.2rem;">
+                  #{{ .JSON.Int "num" }} — {{ .JSON.String "safe_title" }}
+                </p>
+                <p style="margin-top:6px; font-size:0.78rem; opacity:0.6; line-height:1.5; font-style:italic;">
+                  {{ .JSON.String "alt" }}
+                </p>
               </div>
+
           - type: rss
             title: Entertainment News
             limit: 10
+            collapse-after: 5
+            cache: 30m
             feeds:
               - url: https://variety.com/feed/
                 title: Variety
+              - url: https://deadline.com/feed/
+                title: Deadline
+              - url: https://www.hollywoodreporter.com/feed/
+                title: Hollywood Reporter
+              - url: https://www.theguardian.com/film/rss
+                title: Guardian Film
 
+      # -----------------------------------------------------------------------
+      # MIDDLE COLUMN (full) — Movie/TV posters + Events
+      # Replace YOUR_TMDB_API_KEY 
+      # -----------------------------------------------------------------------
       - size: full
         widgets:
+
+          # --- Now Playing Movies (cinema) ---
           - type: custom-api
             title: 🎬 Now In Cinemas
-            url: https://api.themoviedb.org/3/movie/now_playing?api_key=YOUR_TMDB_API_KEY&region=AU&language=en-AU&page=1
+            cache: 12h
+            url: https://api.themoviedb.org/3/movie/now_playing?api_key=bb819ccde699d37158d85e8c720870a9&region=AU&language=en-AU&page=1
             template: |
-              <div style="display:flex; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; flex-wrap:wrap; gap:12px; padding:4px 0;">
                 {{ range $i, $m := .JSON.Array "results" }}
                   {{ if lt $i 12 }}
-                    <div style="width:120px; text-align:center;">
-                      <img src="https://image.tmdb.org/t/p/w185{{ $m.String "poster_path" }}" style="width:120px; border-radius:6px;" />
-                    </div>
+                  <div style="width:120px; flex-shrink:0; text-align:center;">
+                    <a href="https://www.themoviedb.org/movie/{{ $m.Int "id" }}" target="_blank">
+                      {{ if ne ($m.String "poster_path") "" }}
+                      <img src="https://image.tmdb.org/t/p/w185{{ $m.String "poster_path" }}"
+                           style="width:120px; height:180px; object-fit:cover; border-radius:6px;" />
+                      {{ else }}
+                      <div style="width:120px; height:180px; background:rgba(255,255,255,0.08);
+                                  border-radius:6px; display:flex; align-items:center;
+                                  justify-content:center; font-size:2rem;">🎬</div>
+                      {{ end }}
+                    </a>
+                    <p style="font-size:0.72rem; margin-top:5px; line-height:1.3; opacity:0.85;">
+                      {{ $m.String "title" }}
+                    </p>
+                    <p style="font-size:0.68rem; opacity:0.5; margin-top:2px;">
+                      {{ $m.String "release_date" }}
+                    </p>
+                  </div>
                   {{ end }}
                 {{ end }}
               </div>
-          - type: group
-            widgets:
-              - type: html
-                title: 📍 What's On Melbourne
-                source: |
-                  <div style="display:flex; flex-direction:column; gap:10px;">
-                    <a href="https://whatson.melbourne.vic.gov.au/things-to-do/whats-on-today" target="_blank" style="display:block; padding:10px; background:rgba(255,255,255,0.07); border-radius:8px; text-decoration:none; color:inherit;">📅 Today</a>
-                  </div>
 
+          # --- Upcoming Movies (next 3 months) ---
+          - type: custom-api
+            title: 🍿 Upcoming Movies — Next 3 Months
+            cache: 12h
+            url: https://api.themoviedb.org/3/movie/upcoming?api_key=bb819ccde699d37158d85e8c720870a9&region=AU&language=en-AU&page=1
+            template: |
+              <div style="display:flex; flex-wrap:wrap; gap:12px; padding:4px 0;">
+                {{ range $i, $m := .JSON.Array "results" }}
+                  {{ if lt $i 12 }}
+                  <div style="width:120px; flex-shrink:0; text-align:center;">
+                    <a href="https://www.themoviedb.org/movie/{{ $m.Int "id" }}" target="_blank">
+                      {{ if ne ($m.String "poster_path") "" }}
+                      <img src="https://image.tmdb.org/t/p/w185{{ $m.String "poster_path" }}"
+                           style="width:120px; height:180px; object-fit:cover; border-radius:6px;" />
+                      {{ else }}
+                      <div style="width:120px; height:180px; background:rgba(255,255,255,0.08);
+                                  border-radius:6px; display:flex; align-items:center;
+                                  justify-content:center; font-size:2rem;">🎬</div>
+                      {{ end }}
+                    </a>
+                    <p style="font-size:0.72rem; margin-top:5px; line-height:1.3; opacity:0.85;">
+                      {{ $m.String "title" }}
+                    </p>
+                    <p style="font-size:0.68rem; opacity:0.5; margin-top:2px;">
+                      {{ $m.String "release_date" }}
+                    </p>
+                  </div>
+                  {{ end }}
+                {{ end }}
+              </div>
+
+          # --- Streaming: TV Shows Airing This Week ---
+          - type: custom-api
+            title: 📺 TV Series — Airing This Week
+            cache: 12h
+            url: https://api.themoviedb.org/3/tv/on_the_air?api_key=bb819ccde699d37158d85e8c720870a9&language=en-AU&page=1
+            template: |
+              <div style="display:flex; flex-wrap:wrap; gap:12px; padding:4px 0;">
+                {{ range $i, $s := .JSON.Array "results" }}
+                  {{ if lt $i 10 }}
+                  <div style="width:120px; flex-shrink:0; text-align:center;">
+                    <a href="https://www.themoviedb.org/tv/{{ $s.Int "id" }}" target="_blank">
+                      {{ if ne ($s.String "poster_path") "" }}
+                      <img src="https://image.tmdb.org/t/p/w185{{ $s.String "poster_path" }}"
+                           style="width:120px; height:180px; object-fit:cover; border-radius:6px;" />
+                      {{ else }}
+                      <div style="width:120px; height:180px; background:rgba(255,255,255,0.08);
+                                  border-radius:6px; display:flex; align-items:center;
+                                  justify-content:center; font-size:2rem;">📺</div>
+                      {{ end }}
+                    </a>
+                    <p style="font-size:0.72rem; margin-top:5px; line-height:1.3; opacity:0.85;">
+                      {{ $s.String "name" }}
+                    </p>
+                    <p style="font-size:0.68rem; opacity:0.5; margin-top:2px;">
+                      First air: {{ $s.String "first_air_date" }}
+                    </p>
+                  </div>
+                  {{ end }}
+                {{ end }}
+              </div>
+
+          # --- Events: Melbourne ---
+          # Ticketmaster covers Melbourne well. Replace YOUR_TICKETMASTER_API_KEY
+          - type: group
+  widgets:
+    - type: html
+      title: 📍 What's On Melbourne
+      source: |
+        <div style="display:flex; flex-direction:column; gap:10px; padding:4px 0;">
+          <p style="font-size:0.78rem; opacity:0.5; margin-bottom:4px;">
+            Tap a category to open whatson.melbourne.vic.gov.au
+          </p>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/whats-on-today"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            📅 <strong>Today</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/this-weekend"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🎉 <strong>This Weekend</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/whats-on-this-week-in-melbourne"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🗓️ <strong>This Week</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/major-events"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🌟 <strong>Major Events</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/festivals"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🎪 <strong>Festivals</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/exhibitions"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🖼️ <strong>Exhibitions</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/entertainment/concerts-and-gigs"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🎵 <strong>Concerts & Gigs</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/free"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🆓 <strong>Free Events</strong>
+          </a>
+        </div>
+
+    - type: rss
+      title: 📰 Melbourne Event News
+      cache: 4h
+      limit: 10
+      collapse-after: 6
+      feeds:
+        - url: https://www.broadsheet.com.au/melbourne/feed
+          title: Broadsheet Melbourne
+        - url: https://www.timeout.com/melbourne/rss
+          title: Time Out Melbourne
+        - url: https://www.theguardian.com/australia-news/melbourne/rss
+          title: Guardian Melbourne
+
+        # --- Events: Guangzhou (RSS fallback — Ticketmaster has no China coverage) ---
+        - type: rss
+          title: 📍 Guangzhou Events
+          cache: 6h
+          limit: 6
+          feeds:
+            - url: https://www.timeoutgz.com/feed
+              title: Time Out Guangzhou
+            - url: https://www.thebeijinger.com/rss.xml
+              title: The Beijinger (China events)
+
+      # -----------------------------------------------------------------------
+      # RIGHT COLUMN — Celebrities born this week (TMDB popular people, weekly)
+      # cache: 168h = refreshes once per week (Monday if deployed on Monday)
+      # TMDB has no "born this week" endpoint — shows popular celebrities
+      # with birthday month/day filtered client-side via JS
+      # -----------------------------------------------------------------------
       - size: small
         widgets:
+
           - type: html
             title: 🎂 Celebrities Born This Week
             source: |
-              <div id="celeb-container"><p style="opacity:0.5;">Loading...</p></div>
-              <script> /* Script remains same as original */ </script>
+              <div id="celeb-container">
+                <p style="opacity:0.5; font-size:0.8rem;">Loading...</p>
+              </div>
+              <script>
+                (async () => {
+                  const key = 'bb819ccde699d37158d85e8c720870a9';
+                  const now = new Date();
+                  // Get Mon–Sun of current week
+                  const day = now.getDay(); // 0=Sun, 1=Mon...
+                  const diffToMon = (day === 0 ? -6 : 1 - day);
+                  const mon = new Date(now); mon.setDate(now.getDate() + diffToMon);
+                  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+
+                  // Fetch 5 pages of popular people and filter by birthday this week
+                  const pages = [1, 2, 3, 4, 5];
+                  let matches = [];
+
+                  for (const p of pages) {
+                    try {
+                      const r = await fetch(
+                        `https://api.themoviedb.org/3/person/popular?api_key=${key}&page=${p}`
+                      );
+                      const data = await r.json();
+                      for (const person of data.results || []) {
+                        if (!person.profile_path) continue;
+                        // Fetch individual birthday
+                        const pr = await fetch(
+                          `https://api.themoviedb.org/3/person/${person.id}?api_key=${key}`
+                        );
+                        const pd = await pr.json();
+                        if (!pd.birthday) continue;
+                        const bParts = pd.birthday.split('-');
+                        if (bParts.length < 3) continue;
+                        const bMonth = parseInt(bParts[1]);
+                        const bDay   = parseInt(bParts[2]);
+                        // Check if birthday month/day falls within this Mon–Sun
+                        const bThisYear = new Date(now.getFullYear(), bMonth - 1, bDay);
+                        if (bThisYear >= mon && bThisYear <= sun) {
+                          matches.push({
+                            name: pd.name,
+                            birthday: pd.birthday,
+                            img: `https://image.tmdb.org/t/p/w185${pd.profile_path}`,
+                            url: `https://www.themoviedb.org/person/${pd.id}`,
+                            age: now.getFullYear() - parseInt(bParts[0])
+                          });
+                        }
+                        if (matches.length >= 10) break;
+                      }
+                      if (matches.length >= 10) break;
+                    } catch(e) { break; }
+                  }
+
+                  const el = document.getElementById('celeb-container');
+                  if (matches.length === 0) {
+                    el.innerHTML = '<p style="opacity:0.5;font-size:1.2rem;">No celebrity birthdays found in TMDB popular list this week.</p>';
+                    return;
+                  }
+
+                  el.innerHTML = matches.map(c => `
+                    <div style="display:flex;gap:10px;align-items:center;
+                                padding:8px;margin-bottom:8px;
+                                background:rgba(255,255,255,0.05);border-radius:8px;">
+                      <a href="${c.url}" target="_blank">
+                        <img src="${c.img}" style="width:52px;height:52px;
+                             object-fit:cover;border-radius:50%;flex-shrink:0;" />
+                      </a>
+                      <div>
+                        <a href="${c.url}" target="_blank"
+                           style="font-size:1.2rem;
+                                  color:var(--color-primary);text-decoration:none;">
+                          ${c.name}
+                        </a>
+                        <p style="font-size:1.2rem;opacity:0.6;margin-top:2px;">
+                          🎂 ${c.birthday} · Turns ${c.age}
+                        </p>
+                      </div>
+                    </div>
+                  `).join('');
+                })();
+              </script>
+
           - type: rss
-            title: 📰 Melbourne Event News
+            title: Celebrity & Pop Culture News
+            limit: 10
+            collapse-after: 6
+            cache: 30m
             feeds:
-              - url: https://www.broadsheet.com.au/melbourne/feed
-                title: Broadsheet
+              - url: https://people.com/feed/
+                title: People Magazine
+              - url: https://www.eonline.com/syndication/feeds/rssfeeds/topstories.xml
+                title: E! Online
+              - url: https://www.theguardian.com/culture/rss
+                title: Guardian Culture
