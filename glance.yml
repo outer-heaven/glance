@@ -1,15 +1,6 @@
 # =============================================================================
 # GLANCE DASHBOARD — Melbourne Home Butler
-# Pages: Home | Markets | Gaming
-# =============================================================================
-# IMPORTANT — Reddit widgets on Render (VPS) require Reddit API credentials.
-# Reddit blocks unauthenticated VPS requests with 403.
-# Steps to fix:
-#   1. Go to https://www.reddit.com/prefs/apps
-#   2. Click "create another app" → choose "script"
-#   3. Name it anything, set redirect URI to http://localhost:8080
-#   4. Copy the app ID (under the app name) and the secret
-#   5. Replace YOUR_REDDIT_APP_ID and YOUR_REDDIT_APP_SECRET below
+# Pages: Home | Markets | Gaming | Entertainment
 # =============================================================================
 
 server:
@@ -626,3 +617,344 @@ pages:
             feeds:
               - url: https://www.nintendolife.com/feeds/latest
                 title: Nintendo Life
+
+        # ===========================================================================
+        # PAGE 4: ENTERTAINMENT
+        # Left: XKCD comic | Centre: Movie/TV posters + Events | Right: Celebrity birthdays
+        # Requires: TMDB_API_KEY and TICKETMASTER_API_KEY
+        # ===========================================================================
+
+  - name: Entertainment
+
+    columns:
+
+      # -----------------------------------------------------------------------
+      # LEFT COLUMN — Daily XKCD Comic Strip
+      # -----------------------------------------------------------------------
+      - size: small
+        widgets:
+
+          - type: custom-api
+            title: XKCD — Today's Comic
+            cache: 24h
+            url: https://xkcd.com/info.0.json
+            template: |
+              <div style="text-align:center; padding:4px 0;">
+                <a href="https://xkcd.com/{{ .JSON.Int "num" }}" target="_blank">
+                  <img src="{{ .JSON.String "img" }}"
+                       alt="{{ .JSON.String "alt" }}"
+                       style="max-width:100%; border-radius:6px;" />
+                </a>
+                <p style="margin-top:10px; font-weight:600; font-size:0.9rem;">
+                  #{{ .JSON.Int "num" }} — {{ .JSON.String "safe_title" }}
+                </p>
+                <p style="margin-top:6px; font-size:0.78rem; opacity:0.6; line-height:1.5; font-style:italic;">
+                  {{ .JSON.String "alt" }}
+                </p>
+              </div>
+
+          - type: rss
+            title: Entertainment News
+            limit: 10
+            collapse-after: 5
+            cache: 30m
+            feeds:
+              - url: https://variety.com/feed/
+                title: Variety
+              - url: https://deadline.com/feed/
+                title: Deadline
+              - url: https://www.hollywoodreporter.com/feed/
+                title: Hollywood Reporter
+              - url: https://www.theguardian.com/film/rss
+                title: Guardian Film
+
+      # -----------------------------------------------------------------------
+      # MIDDLE COLUMN (full) — Movie/TV posters + Events
+      # Replace YOUR_TMDB_API_KEY 
+      # -----------------------------------------------------------------------
+      - size: full
+        widgets:
+
+          # --- Now Playing Movies (cinema) ---
+          - type: custom-api
+            title: 🎬 Now In Cinemas
+            cache: 12h
+            url: https://api.themoviedb.org/3/movie/now_playing?api_key=YOUR_TMDB_API_KEY&region=AU&language=en-AU&page=1
+            template: |
+              <div style="display:flex; flex-wrap:wrap; gap:12px; padding:4px 0;">
+                {{ range $i, $m := .JSON.Array "results" }}
+                  {{ if lt $i 12 }}
+                  <div style="width:120px; flex-shrink:0; text-align:center;">
+                    <a href="https://www.themoviedb.org/movie/{{ $m.Int "id" }}" target="_blank">
+                      {{ if ne ($m.String "poster_path") "" }}
+                      <img src="https://image.tmdb.org/t/p/w185{{ $m.String "poster_path" }}"
+                           style="width:120px; height:180px; object-fit:cover; border-radius:6px;" />
+                      {{ else }}
+                      <div style="width:120px; height:180px; background:rgba(255,255,255,0.08);
+                                  border-radius:6px; display:flex; align-items:center;
+                                  justify-content:center; font-size:2rem;">🎬</div>
+                      {{ end }}
+                    </a>
+                    <p style="font-size:0.72rem; margin-top:5px; line-height:1.3; opacity:0.85;">
+                      {{ $m.String "title" }}
+                    </p>
+                    <p style="font-size:0.68rem; opacity:0.5; margin-top:2px;">
+                      {{ $m.String "release_date" }}
+                    </p>
+                  </div>
+                  {{ end }}
+                {{ end }}
+              </div>
+
+          # --- Upcoming Movies (next 3 months) ---
+          - type: custom-api
+            title: 🍿 Upcoming Movies — Next 3 Months
+            cache: 12h
+            url: https://api.themoviedb.org/3/movie/upcoming?api_key=bb819ccde699d37158d85e8c720870a9&region=AU&language=en-AU&page=1
+            template: |
+              <div style="display:flex; flex-wrap:wrap; gap:12px; padding:4px 0;">
+                {{ range $i, $m := .JSON.Array "results" }}
+                  {{ if lt $i 12 }}
+                  <div style="width:120px; flex-shrink:0; text-align:center;">
+                    <a href="https://www.themoviedb.org/movie/{{ $m.Int "id" }}" target="_blank">
+                      {{ if ne ($m.String "poster_path") "" }}
+                      <img src="https://image.tmdb.org/t/p/w185{{ $m.String "poster_path" }}"
+                           style="width:120px; height:180px; object-fit:cover; border-radius:6px;" />
+                      {{ else }}
+                      <div style="width:120px; height:180px; background:rgba(255,255,255,0.08);
+                                  border-radius:6px; display:flex; align-items:center;
+                                  justify-content:center; font-size:2rem;">🎬</div>
+                      {{ end }}
+                    </a>
+                    <p style="font-size:0.72rem; margin-top:5px; line-height:1.3; opacity:0.85;">
+                      {{ $m.String "title" }}
+                    </p>
+                    <p style="font-size:0.68rem; opacity:0.5; margin-top:2px;">
+                      {{ $m.String "release_date" }}
+                    </p>
+                  </div>
+                  {{ end }}
+                {{ end }}
+              </div>
+
+          # --- Streaming: TV Shows Airing This Week ---
+          - type: custom-api
+            title: 📺 TV Series — Airing This Week
+            cache: 12h
+            url: https://api.themoviedb.org/3/tv/on_the_air?api_key=bb819ccde699d37158d85e8c720870a9&language=en-AU&page=1
+            template: |
+              <div style="display:flex; flex-wrap:wrap; gap:12px; padding:4px 0;">
+                {{ range $i, $s := .JSON.Array "results" }}
+                  {{ if lt $i 10 }}
+                  <div style="width:120px; flex-shrink:0; text-align:center;">
+                    <a href="https://www.themoviedb.org/tv/{{ $s.Int "id" }}" target="_blank">
+                      {{ if ne ($s.String "poster_path") "" }}
+                      <img src="https://image.tmdb.org/t/p/w185{{ $s.String "poster_path" }}"
+                           style="width:120px; height:180px; object-fit:cover; border-radius:6px;" />
+                      {{ else }}
+                      <div style="width:120px; height:180px; background:rgba(255,255,255,0.08);
+                                  border-radius:6px; display:flex; align-items:center;
+                                  justify-content:center; font-size:2rem;">📺</div>
+                      {{ end }}
+                    </a>
+                    <p style="font-size:0.72rem; margin-top:5px; line-height:1.3; opacity:0.85;">
+                      {{ $s.String "name" }}
+                    </p>
+                    <p style="font-size:0.68rem; opacity:0.5; margin-top:2px;">
+                      First air: {{ $s.String "first_air_date" }}
+                    </p>
+                  </div>
+                  {{ end }}
+                {{ end }}
+              </div>
+
+          # --- Events: Melbourne ---
+          # Ticketmaster covers Melbourne well. Replace YOUR_TICKETMASTER_API_KEY
+          - type: group
+  widgets:
+    - type: html
+      title: 📍 What's On Melbourne
+      source: |
+        <div style="display:flex; flex-direction:column; gap:10px; padding:4px 0;">
+          <p style="font-size:0.78rem; opacity:0.5; margin-bottom:4px;">
+            Tap a category to open whatson.melbourne.vic.gov.au
+          </p>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/whats-on-today"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            📅 <strong>Today</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/this-weekend"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🎉 <strong>This Weekend</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/whats-on-this-week-in-melbourne"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🗓️ <strong>This Week</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/major-events"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🌟 <strong>Major Events</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/festivals"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🎪 <strong>Festivals</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/exhibitions"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🖼️ <strong>Exhibitions</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/entertainment/concerts-and-gigs"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🎵 <strong>Concerts & Gigs</strong>
+          </a>
+          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/free"
+             target="_blank"
+             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                    border-radius:8px; text-decoration:none; color:inherit;">
+            🆓 <strong>Free Events</strong>
+          </a>
+        </div>
+
+    - type: rss
+      title: 📰 Melbourne Event News
+      cache: 4h
+      limit: 10
+      collapse-after: 6
+      feeds:
+        - url: https://www.broadsheet.com.au/melbourne/feed
+          title: Broadsheet Melbourne
+        - url: https://www.timeout.com/melbourne/rss
+          title: Time Out Melbourne
+        - url: https://www.theguardian.com/australia-news/melbourne/rss
+          title: Guardian Melbourne
+
+        # --- Events: Guangzhou (RSS fallback — Ticketmaster has no China coverage) ---
+        - type: rss
+          title: 📍 Guangzhou Events
+          cache: 6h
+          limit: 6
+          feeds:
+            - url: https://www.timeoutgz.com/feed
+              title: Time Out Guangzhou
+            - url: https://www.thebeijinger.com/rss.xml
+              title: The Beijinger (China events)
+
+      # -----------------------------------------------------------------------
+      # RIGHT COLUMN — Celebrities born this week (TMDB popular people, weekly)
+      # cache: 168h = refreshes once per week (Monday if deployed on Monday)
+      # TMDB has no "born this week" endpoint — shows popular celebrities
+      # with birthday month/day filtered client-side via JS
+      # -----------------------------------------------------------------------
+      - size: small
+        widgets:
+
+          - type: html
+            title: 🎂 Celebrities Born This Week
+            source: |
+              <div id="celeb-container">
+                <p style="opacity:0.5; font-size:0.8rem;">Loading...</p>
+              </div>
+              <script>
+                (async () => {
+                  const key = 'bb819ccde699d37158d85e8c720870a9';
+                  const now = new Date();
+                  // Get Mon–Sun of current week
+                  const day = now.getDay(); // 0=Sun, 1=Mon...
+                  const diffToMon = (day === 0 ? -6 : 1 - day);
+                  const mon = new Date(now); mon.setDate(now.getDate() + diffToMon);
+                  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+
+                  // Fetch 5 pages of popular people and filter by birthday this week
+                  const pages = [1, 2, 3, 4, 5];
+                  let matches = [];
+
+                  for (const p of pages) {
+                    try {
+                      const r = await fetch(
+                        `https://api.themoviedb.org/3/person/popular?api_key=${key}&page=${p}`
+                      );
+                      const data = await r.json();
+                      for (const person of data.results || []) {
+                        if (!person.profile_path) continue;
+                        // Fetch individual birthday
+                        const pr = await fetch(
+                          `https://api.themoviedb.org/3/person/${person.id}?api_key=${key}`
+                        );
+                        const pd = await pr.json();
+                        if (!pd.birthday) continue;
+                        const bParts = pd.birthday.split('-');
+                        if (bParts.length < 3) continue;
+                        const bMonth = parseInt(bParts[1]);
+                        const bDay   = parseInt(bParts[2]);
+                        // Check if birthday month/day falls within this Mon–Sun
+                        const bThisYear = new Date(now.getFullYear(), bMonth - 1, bDay);
+                        if (bThisYear >= mon && bThisYear <= sun) {
+                          matches.push({
+                            name: pd.name,
+                            birthday: pd.birthday,
+                            img: `https://image.tmdb.org/t/p/w185${pd.profile_path}`,
+                            url: `https://www.themoviedb.org/person/${pd.id}`,
+                            age: now.getFullYear() - parseInt(bParts[0])
+                          });
+                        }
+                        if (matches.length >= 10) break;
+                      }
+                      if (matches.length >= 10) break;
+                    } catch(e) { break; }
+                  }
+
+                  const el = document.getElementById('celeb-container');
+                  if (matches.length === 0) {
+                    el.innerHTML = '<p style="opacity:0.5;font-size:1.2rem;">No celebrity birthdays found in TMDB popular list this week.</p>';
+                    return;
+                  }
+
+                  el.innerHTML = matches.map(c => `
+                    <div style="display:flex;gap:10px;align-items:center;
+                                padding:8px;margin-bottom:8px;
+                                background:rgba(255,255,255,0.05);border-radius:8px;">
+                      <a href="${c.url}" target="_blank">
+                        <img src="${c.img}" style="width:52px;height:52px;
+                             object-fit:cover;border-radius:50%;flex-shrink:0;" />
+                      </a>
+                      <div>
+                        <a href="${c.url}" target="_blank"
+                           style="font-size:1.2rem;
+                                  color:var(--color-primary);text-decoration:none;">
+                          ${c.name}
+                        </a>
+                        <p style="font-size:1.2rem;opacity:0.6;margin-top:2px;">
+                          🎂 ${c.birthday} · Turns ${c.age}
+                        </p>
+                      </div>
+                    </div>
+                  `).join('');
+                })();
+              </script>
+
+          - type: rss
+            title: Celebrity & Pop Culture News
+            limit: 10
+            collapse-after: 6
+            cache: 30m
+            feeds:
+              - url: https://people.com/feed/
+                title: People Magazine
+              - url: https://www.eonline.com/syndication/feeds/rssfeeds/topstories.xml
+                title: E! Online
+              - url: https://www.theguardian.com/culture/rss
+                title: Guardian Culture
