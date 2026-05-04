@@ -134,7 +134,8 @@ pages:
                     </div>
                   {{ end }}
                 </div>
-            </div>
+              </div>
+            
           - type: rss
             title: Local News
             style: horizontal-cards
