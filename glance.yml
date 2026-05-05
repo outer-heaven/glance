@@ -114,7 +114,8 @@ pages:
                     {{ $date := $day.String "" }}
                     <div style="display:flex; justify-content:space-between; align-items:center;
                                 padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:6px;">
-                      <span style="width:110px; font-size:1.2rmatTime "Mon 2 Jan" }}
+                      <span style="width:110px; font-size:1.2rem;">
+                        {{ $date | parseTime "2006-01-02" | formatTime "Mon 2 Jan" }}
                       </span>
                       <span style="width:36px; font-size:1.8rem; text-align:center;">
                         {{ if le $code 1 }}☀️
@@ -134,8 +135,6 @@ pages:
                     </div>
                   {{ end }}
                 </div>
-              </div>
-            
           - type: rss
             title: Local News
             style: horizontal-cards
@@ -641,7 +640,7 @@ pages:
                        alt="{{ .JSON.String "alt" }}"
                        style="max-width:100%; border-radius:6px;" />
                 </a>
-                <p style="margin-top:10px; font-weight:600; font-size:1.2rem;">
+                <p style="margin-top:10px; font-weight:600; font-size:0.9rem;">
                   #{{ .JSON.Int "num" }} — {{ .JSON.String "safe_title" }}
                 </p>
                 <p style="margin-top:6px; font-size:0.78rem; opacity:0.6; line-height:1.5; font-style:italic;">
@@ -675,7 +674,7 @@ pages:
           - type: custom-api
             title: 🎬 Now In Cinemas
             cache: 12h
-            url: https://api.themoviedb.org/3/movie/now_playing?api_key=bb819ccde699d37158d85e8c720870a9&region=AU&language=en-AU&page=1
+            url: https://api.themoviedb.org/3/movie/now_playing?api_key=YOUR_TMDB_API_KEY&region=AU&language=en-AU&page=1
             template: |
               <div style="display:flex; flex-wrap:wrap; gap:12px; padding:4px 0;">
                 {{ range $i, $m := .JSON.Array "results" }}
@@ -767,87 +766,87 @@ pages:
           # --- Events: Melbourne ---
           # Ticketmaster covers Melbourne well. Replace YOUR_TICKETMASTER_API_KEY
           - type: group
-  widgets:
-    - type: html
-      title: 📍 What's On Melbourne
-      source: |
-        <div style="display:flex; flex-direction:column; gap:10px; padding:4px 0;">
-          <p style="font-size:0.78rem; opacity:0.5; margin-bottom:4px;">
-            Tap a category to open whatson.melbourne.vic.gov.au
-          </p>
-          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/whats-on-today"
-             target="_blank"
-             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
-                    border-radius:8px; text-decoration:none; color:inherit;">
-            📅 <strong>Today</strong>
-          </a>
-          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/this-weekend"
-             target="_blank"
-             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
-                    border-radius:8px; text-decoration:none; color:inherit;">
-            🎉 <strong>This Weekend</strong>
-          </a>
-          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/whats-on-this-week-in-melbourne"
-             target="_blank"
-             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
-                    border-radius:8px; text-decoration:none; color:inherit;">
-            🗓️ <strong>This Week</strong>
-          </a>
-          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/major-events"
-             target="_blank"
-             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
-                    border-radius:8px; text-decoration:none; color:inherit;">
-            🌟 <strong>Major Events</strong>
-          </a>
-          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/festivals"
-             target="_blank"
-             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
-                    border-radius:8px; text-decoration:none; color:inherit;">
-            🎪 <strong>Festivals</strong>
-          </a>
-          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/exhibitions"
-             target="_blank"
-             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
-                    border-radius:8px; text-decoration:none; color:inherit;">
-            🖼️ <strong>Exhibitions</strong>
-          </a>
-          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/entertainment/concerts-and-gigs"
-             target="_blank"
-             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
-                    border-radius:8px; text-decoration:none; color:inherit;">
-            🎵 <strong>Concerts & Gigs</strong>
-          </a>
-          <a href="https://whatson.melbourne.vic.gov.au/things-to-do/free"
-             target="_blank"
-             style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
-                    border-radius:8px; text-decoration:none; color:inherit;">
-            🆓 <strong>Free Events</strong>
-          </a>
-        </div>
+            widgets:
+              - type: html
+                title: 📍 What's On Melbourne
+                source: |
+                  <div style="display:flex; flex-direction:column; gap:10px; padding:4px 0;">
+                    <p style="font-size:0.78rem; opacity:0.5; margin-bottom:4px;">
+                      Tap a category to open whatson.melbourne.vic.gov.au
+                    </p>
+                    <a href="https://whatson.melbourne.vic.gov.au/things-to-do/whats-on-today"
+                       target="_blank"
+                       style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                              border-radius:8px; text-decoration:none; color:inherit;">
+                      📅 <strong>Today</strong>
+                    </a>
+                    <a href="https://whatson.melbourne.vic.gov.au/things-to-do/this-weekend"
+                       target="_blank"
+                       style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                              border-radius:8px; text-decoration:none; color:inherit;">
+                      🎉 <strong>This Weekend</strong>
+                    </a>
+                    <a href="https://whatson.melbourne.vic.gov.au/things-to-do/whats-on-this-week-in-melbourne"
+                       target="_blank"
+                       style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                              border-radius:8px; text-decoration:none; color:inherit;">
+                      🗓️ <strong>This Week</strong>
+                    </a>
+                    <a href="https://whatson.melbourne.vic.gov.au/things-to-do/major-events"
+                       target="_blank"
+                       style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                              border-radius:8px; text-decoration:none; color:inherit;">
+                      🌟 <strong>Major Events</strong>
+                    </a>
+                    <a href="https://whatson.melbourne.vic.gov.au/things-to-do/festivals"
+                       target="_blank"
+                       style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                              border-radius:8px; text-decoration:none; color:inherit;">
+                      🎪 <strong>Festivals</strong>
+                    </a>
+                    <a href="https://whatson.melbourne.vic.gov.au/things-to-do/exhibitions"
+                       target="_blank"
+                       style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                              border-radius:8px; text-decoration:none; color:inherit;">
+                      🖼️ <strong>Exhibitions</strong>
+                    </a>
+                    <a href="https://whatson.melbourne.vic.gov.au/things-to-do/entertainment/concerts-and-gigs"
+                       target="_blank"
+                       style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                              border-radius:8px; text-decoration:none; color:inherit;">
+                      🎵 <strong>Concerts & Gigs</strong>
+                    </a>
+                    <a href="https://whatson.melbourne.vic.gov.au/things-to-do/free"
+                       target="_blank"
+                       style="display:block; padding:10px 14px; background:rgba(255,255,255,0.07);
+                              border-radius:8px; text-decoration:none; color:inherit;">
+                      🆓 <strong>Free Events</strong>
+                    </a>
+                  </div>
 
-    - type: rss
-      title: 📰 Melbourne Event News
-      cache: 4h
-      limit: 10
-      collapse-after: 6
-      feeds:
-        - url: https://www.broadsheet.com.au/melbourne/feed
-          title: Broadsheet Melbourne
-        - url: https://www.timeout.com/melbourne/rss
-          title: Time Out Melbourne
-        - url: https://www.theguardian.com/australia-news/melbourne/rss
-          title: Guardian Melbourne
+              - type: rss
+                title: 📰 Melbourne Event News
+                cache: 4h
+                limit: 10
+                collapse-after: 6
+                feeds:
+                  - url: https://www.broadsheet.com.au/melbourne/feed
+                    title: Broadsheet Melbourne
+                  - url: https://www.timeout.com/melbourne/rss
+                    title: Time Out Melbourne
+                  - url: https://www.theguardian.com/australia-news/melbourne/rss
+                    title: Guardian Melbourne
 
-        # --- Events: Guangzhou (RSS fallback — Ticketmaster has no China coverage) ---
-        - type: rss
-          title: 📍 Guangzhou Events
-          cache: 6h
-          limit: 6
-          feeds:
-            - url: https://www.timeoutgz.com/feed
-              title: Time Out Guangzhou
-            - url: https://www.thebeijinger.com/rss.xml
-              title: The Beijinger (China events)
+              # --- Events: Guangzhou (RSS fallback — Ticketmaster has no China coverage) ---
+              - type: rss
+                title: 📍 Guangzhou Events
+                cache: 6h
+                limit: 6
+                feeds:
+                  - url: https://www.timeoutgz.com/feed
+                    title: Time Out Guangzhou
+                  - url: https://www.thebeijinger.com/rss.xml
+                    title: The Beijinger (China events)
 
       # -----------------------------------------------------------------------
       # RIGHT COLUMN — Celebrities born this week (TMDB popular people, weekly)
